@@ -1,0 +1,38 @@
+{
+  "version": "2026.04-bundled",
+  "features": ["ndwi", "ndti", "fai"],
+  "classifier": {
+    "labels": ["Safe", "Moderate", "Polluted"],
+    "weights": {
+      "Safe": [3.8, -2.1, -18.0],
+      "Moderate": [0.5, 0.8, 8.0],
+      "Polluted": [-3.4, 2.6, 22.0]
+    },
+    "bias": {
+      "Safe": 0.45,
+      "Moderate": 0.1,
+      "Polluted": -0.35
+    }
+  },
+  "regressor": {
+    "weights": {
+      "ndwi": -48.0,
+      "ndti": 105.0,
+      "fai": 820.0
+    },
+    "bias": 32.0
+  },
+  "anomaly_detector": {
+    "center": {
+      "ndwi": 0.32,
+      "ndti": 0.03,
+      "fai": 0.006
+    },
+    "scale": {
+      "ndwi": 0.18,
+      "ndti": 0.09,
+      "fai": 0.018
+    },
+    "threshold": 2.35
+  }
+}

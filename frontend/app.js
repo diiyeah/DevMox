@@ -19,6 +19,34 @@ const API_BASE_URL =
 // ─── Demo / Mock Data ─────────────────────────────────────────────────────────
 // Used automatically when the backend is offline.
 
+function generateDemoMlInsights(label, score, ndwi, ndti, fai) {
+  const confidence = label === "Polluted" ? 0.82 : label === "Moderate" ? 0.68 : 0.76;
+  const anomalyScore = Math.max(8, Math.min(88, Math.round(Math.abs(ndti * 180) + Math.abs(fai * 1200))));
+  return {
+    model_version: "demo-bundled",
+    ensemble_label: label,
+    ensemble_score: score,
+    confidence,
+    regression_score: score,
+    anomaly: {
+      score: anomalyScore,
+      flagged: anomalyScore >= 60,
+    },
+    signals: label === "Safe"
+      ? ["Bundled ML model kept this site in the low-risk bucket."]
+      : ["Bundled ML model detected an elevated spectral pollution pattern."],
+    classifier: {
+      top_label: label,
+      probabilities: {
+        Safe: label === "Safe" ? 0.76 : 0.08,
+        Moderate: label === "Moderate" ? 0.68 : 0.16,
+        Polluted: label === "Polluted" ? 0.82 : 0.12,
+      },
+    },
+    features: { ndwi, ndti, fai },
+  };
+}
+
 function generateDemoAnalysis(lat, lng) {
   // Deterministic-ish variation based on coordinates
   const seed = Math.abs(Math.sin(lat * 12.9898 + lng * 78.233) * 43758.5453) % 1;
@@ -49,6 +77,7 @@ function generateDemoAnalysis(lat, lng) {
     images_used: 5 + Math.round(seed * 10),
     indices: { ndwi, ndti, fai },
     classification: { label, score, color, factors },
+    ml_insights: generateDemoMlInsights(label, score, ndwi, ndti, fai),
     tile_urls: { rgb: null, ndwi: null, pollution: null },
     bbox: { west: lng - 0.05, south: lat - 0.05, east: lng + 0.05, north: lat + 0.05 },
     _demo: true,
@@ -72,7 +101,7 @@ function generateDemoTimeseries(lat, lng, months) {
     else { classification = "Safe"; score = Math.round(monthSeed * 18); }
     series.push({
       month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      ndwi, ndti, fai, classification, score, images: 3 + Math.round(monthSeed * 8),
+      ndwi, ndti, fai, classification, score, ml_score: score, ml_label: classification, images: 3 + Math.round(monthSeed * 8),
     });
   }
 
@@ -116,6 +145,7 @@ function generateDemoAlerts(lat, lng) {
     pollution_score: score,
     factors,
     indices: analysis.indices,
+    ml_insights: analysis.ml_insights,
     recommendations,
     timestamp: new Date().toISOString(),
     _demo: true,
@@ -158,6 +188,7 @@ const dom = {
   valNdti:       $("val-ndti"),
   valFai:        $("val-fai"),
   resultFactors: $("result-factors"),
+  resultMl:      $("result-ml"),
   resultImages:  $("result-images"),
   resultDates:   $("result-dates"),
 
@@ -560,6 +591,7 @@ async function runAnalysis() {
 function renderResultCard(data, isDemo = false) {
   const cls = data.classification;
   const labelClass = cls.label.toLowerCase();
+  const ml = data.ml_insights;
 
   dom.resultLabel.textContent = cls.label;
   dom.resultLabel.className = `result-label ${labelClass}`;
@@ -574,6 +606,29 @@ function renderResultCard(data, isDemo = false) {
   dom.resultFactors.innerHTML = cls.factors.length
     ? cls.factors.map((f) => `<span class="factor-tag">${f}</span>`).join("")
     : '<span style="font-size:0.75rem;color:var(--text-muted)">No significant factors detected</span>';
+
+  if (ml) {
+    const confidence = Math.round((ml.confidence || 0) * 100);
+    const anomaly = Math.round(ml.anomaly?.score || 0);
+    dom.resultMl.innerHTML = `
+      <div class="ml-chip">
+        <span class="ml-chip-label">ML Label</span>
+        <strong>${ml.ensemble_label || cls.label}</strong>
+      </div>
+      <div class="ml-chip">
+        <span class="ml-chip-label">Confidence</span>
+        <strong>${confidence}%</strong>
+      </div>
+      <div class="ml-chip">
+        <span class="ml-chip-label">Anomaly</span>
+        <strong>${anomaly}/100</strong>
+      </div>
+    `;
+    dom.resultMl.classList.remove("hidden");
+  } else {
+    dom.resultMl.classList.add("hidden");
+    dom.resultMl.innerHTML = "";
+  }
 
   dom.resultImages.textContent = `📡 ${data.images_used} Sentinel-2 images${isDemo ? " (demo)" : ""}`;
   dom.resultDates.textContent  = `📅 ${data.date_range.start} → ${data.date_range.end}`;

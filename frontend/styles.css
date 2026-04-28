@@ -727,6 +727,30 @@ strong { font-weight: var(--fw-semibold); }
   gap: var(--space-2);
 }
 
+.result-ml {
+  padding: 0 var(--space-4) var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: var(--space-2);
+}
+
+.ml-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ml-chip-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .factor-tag {
   font-size: var(--text-xs);
   padding: var(--space-1) var(--space-2);
